@@ -2,6 +2,8 @@ import express, { Request, Response } from 'express'
 import cookieParser from "cookie-parser";
 import cors from "cors"
 import routes from './routes/user.route';
+import logRoutes from './routes/log.route';
+import { options } from './controller/user.controller';
 
 const app = express()
 
@@ -16,6 +18,11 @@ app.use(cors({
     credentials:true
 }))
 
+app.get('/test-cookie', (req, res) => {
+    res.cookie('test', 'value', options);
+    res.send('Cookie set');
+});
+  
 //API Routes
 app.get('/ping',(req : Request , res : Response)=>{
     res.send("Hello World")
@@ -23,6 +30,8 @@ app.get('/ping',(req : Request , res : Response)=>{
 
 //user authentication routes
 app.use('/api/v1/user', routes); // Use modularized routes
+app.use('/api/v1/log', logRoutes); 
+
 
 
 export default app

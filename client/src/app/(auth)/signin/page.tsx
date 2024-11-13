@@ -32,12 +32,14 @@ const SignIn = () => {
     setIsSubmitting(true)
     try {
       const response = await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/v1/user/login`, data)
+      axios.defaults.withCredentials = true;
+
       toast({
         title: "Success",
         description: response.data.message,
       })
-      router.push("/")
-    } catch (error) {
+      router.push("/log")
+    } catch (error:any) {
       console.error("Error in signing in user:", error)
       const axiosError = error as AxiosError<ApiResponse>
       const err = axiosError.response?.data.message

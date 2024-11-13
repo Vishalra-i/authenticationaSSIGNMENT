@@ -1,0 +1,26 @@
+version: "3.8"
+services:
+  backend:
+    build:
+      context: ./server
+    ports:
+      - "4000:4000"
+    environment:
+      - MONGODB_URI=mongodb+srv://vishalrai0392:Vishal123@vishal.cc4bno2.mongodb.net
+      - PORT=4000
+      - JWT_SECRET=vishal7492
+      - CLIENT_URL=http://localhost:3000
+    volumes:
+      - ./backend:/app
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ./client
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_SERVER_URL=http://localhost:4000
+    volumes:
+      - ./frontend:/app
+    command: npm run dev

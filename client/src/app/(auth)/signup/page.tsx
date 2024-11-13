@@ -43,7 +43,7 @@ const Signup = () => {
          description : response.data.message
        })
        router.push("/signin")
-     } catch (error) {
+     } catch (error:any) {
        console.error("Error in signup user ::" + error)
        const axiosError = error as AxiosError<ApiResponse>
        let err = axiosError.response?.data.message 

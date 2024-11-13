@@ -1,14 +1,21 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-const logSchema = new mongoose.Schema({
+export interface ILog extends Document {
+  actionType: string;
+  userId: mongoose.Types.ObjectId | string;  
+  role: string;
+  additionalData?: Record<string, unknown>;
+  timestamp: Date;
+  isDeleted: boolean;
+}
+
+const LogSchema: Schema = new Schema({
   actionType: { type: String, required: true },
-  timestamp: { type: Date, default: Date.now },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   role: { type: String, required: true },
-  additionalData: { type: mongoose.Schema.Types.Mixed },
-  isDeleted: { type: Boolean, default: false }
+  additionalData: { type: Object, default: {} },
+  timestamp: { type: Date, default: Date.now },
+  isDeleted: { type: Boolean, default: false },
 });
 
-const Log = mongoose.model('Log', logSchema);
-
-export default Log;
+export default mongoose.model<ILog>('Log', LogSchema);

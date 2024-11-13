@@ -12,23 +12,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllUser = exports.logout = exports.login = exports.createUser = void 0;
+exports.deleteUser = exports.getAllUser = exports.logout = exports.login = exports.createUser = exports.options = void 0;
 const ApiError_1 = __importDefault(require("../utils/ApiError"));
 const ApiResponse_1 = __importDefault(require("../utils/ApiResponse"));
 const asyncHandler_1 = __importDefault(require("../utils/asyncHandler"));
 const user_model_1 = __importDefault(require("../models/user.model"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const log_middleware_1 = __importDefault(require("../utils/log.middleware"));
 //cookie options
-const options = {
+exports.options = {
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production' ? true : false,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
 };
-//generate jwt token to store user with cokkie
+//generate jwt key to store user with cokkie
 const generateToken = (user) => {
-    const token = jsonwebtoken_1.default.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    return token;
+    const key = jsonwebtoken_1.default.sign({ _id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    return key;
 };
 //Sign Up
 exports.createUser = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -40,13 +41,14 @@ exports.createUser = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0,
     if (!user) {
         throw new ApiError_1.default(500, 'User creation failed');
     }
-    const token = generateToken(user);
-    if (!token) {
+    if (!key) {
         throw new ApiError_1.default(500, 'Token generation failed');
     }
+    const id = user._id;
+    // Log the login action
+    yield (0, log_middleware_1.default)('SIGNUP', id.toString(), user.role);
     res.status(201)
-        .cookie('token', token, options)
-        .json(new ApiResponse_1.default(201, { user: user.toObject(), token }, 'User created successfully'));
+        .json(new ApiResponse_1.default(201, { user: user.toObject(), key }, 'User created successfully'));
 }));
 //Login a user
 exports.login = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -63,18 +65,25 @@ exports.login = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void
     if (!isMatch) {
         throw new ApiError_1.default(401, 'Invalid credentials');
     }
-    const token = generateToken(user);
+    const key = generateToken(user);
+    const _id = user._id;
+    // Log the login action
+    yield (0, log_middleware_1.default)('LOGIN', _id.toString(), user.role);
     res.status(200)
-        .cookie('token', token, options)
-        .json(new ApiResponse_1.default(200, { user: user.toObject(), token }, 'User logged in successfully'));
+        .cookie('key', key, exports.options)
+        .cookie('role', user.role, exports.options)
+        .json(new ApiResponse_1.default(200, { user: user.toObject(), key }, 'User logged in successfully'));
 }));
 //Logout a user
 exports.logout = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     if (!(req === null || req === void 0 ? void 0 : req.user)) {
         throw new ApiError_1.default(401, 'Unauthorized');
     }
+    yield (0, log_middleware_1.default)('LOGOUT', req === null || req === void 0 ? void 0 : req.user._id.toString(), req === null || req === void 0 ? void 0 : req.user.role);
+    console.log("user logout");
     res.status(200)
-        .clearCookie('token', options)
+        .clearCookie('key', exports.options)
+        .clearCookie('role', exports.options)
         .json(new ApiResponse_1.default(200, {}, 'User logged out successfully'));
 }));
 //get all user
@@ -111,4 +120,16 @@ exports.getAllUser = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0,
         currentPage: pageNum,
         users,
     }, 'Users retrieved successfully'));
+}));
+exports.deleteUser = (0, asyncHandler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    const user = yield user_model_1.default.findById(id);
+    if (!user) {
+        throw new ApiError_1.default(404, 'User not found');
+    }
+    yield user.deleteOne();
+    const _id = user._id;
+    // Log the delete action
+    yield (0, log_middleware_1.default)('DELETE_USER', _id.toString(), user.role);
+    res.status(200).json(new ApiResponse_1.default(200, {}, 'User deleted successfully'));
 }));

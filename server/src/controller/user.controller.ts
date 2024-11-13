@@ -4,19 +4,20 @@ import asyncHandler from '../utils/asyncHandler' ;
 import User  from '../models/user.model' ;
 import jwt from 'jsonwebtoken';
 import { CookieOptions } from 'express';
+import logUserAction from '../utils/log.middleware';
 
 //cookie options
-const options: CookieOptions = {
+export const options: CookieOptions = {
   httpOnly: true,
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  secure: process.env.NODE_ENV === 'production',
+  secure: process.env.NODE_ENV === 'production' ? true : false,
   maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
 };
 
-//generate jwt token to store user with cokkie
+//generate jwt key to store user with cokkie
 const generateToken = (user: User) => {
-  const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET as string, { expiresIn: '1d' });
-  return token;
+  const key = jwt.sign({ _id: user._id , role : user.role }, process.env.JWT_SECRET as string, { expiresIn: '1d' });
+  return key;
 };
 
 //Sign Up
@@ -33,15 +34,18 @@ export const createUser = asyncHandler(async (req, res) => {
       throw new ApiError(500, 'User creation failed');
   }
 
-  const token = generateToken(user);
 
-  if(!token){
+  if(!key){
     throw new ApiError(500, 'Token generation failed')
   }
 
+  const id = user._id as string
+  // Log the login action
+  await logUserAction('SIGNUP', id.toString(), user.role);
+
+
   res.status(201)
-      .cookie('token', token, options)
-      .json(new ApiResponse(201, { user: user.toObject(), token }, 'User created successfully'));
+      .json(new ApiResponse(201, { user: user.toObject(), key }, 'User created successfully'));
 });
 
 
@@ -65,22 +69,30 @@ export const login = asyncHandler(async (req, res) => {
       throw new ApiError(401, 'Invalid credentials');
   }
 
-  const token = generateToken(user);
+  const key = generateToken(user);
+  const _id = user._id as string
+  // Log the login action
+  await logUserAction('LOGIN', _id.toString(), user.role );
 
   res.status(200)
-      .cookie('token', token, options)
-      .json(new ApiResponse(200, { user: user.toObject(), token }, 'User logged in successfully'));
+      .cookie('key', key, options)
+      .cookie('role', user.role, options)
+      .json(new ApiResponse(200, { user: user.toObject(), key }, 'User logged in successfully'));
 });
 
 
 //Logout a user
 export const logout = asyncHandler(async (req, res) => {
   if (!req?.user) {
-      throw new ApiError(401, 'Unauthorized');
+    throw new ApiError(401, 'Unauthorized');
   }
 
+  await logUserAction('LOGOUT', req?.user._id.toString(), req?.user.role);
+  console.log("user logout")
+ 
   res.status(200)
-      .clearCookie('token', options)
+      .clearCookie('key', options)
+      .clearCookie('role', options)
       .json(new ApiResponse(200, {}, 'User logged out successfully'));
 });
 
@@ -134,5 +146,23 @@ export const getAllUser = asyncHandler(async (req, res) => {
         }, 'Users retrieved successfully')
     );
 });
+
+export const deleteUser = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+  
+    const user = await User.findById(id);
+    if (!user) {
+      throw new ApiError(404, 'User not found');
+    }
+  
+    await user.deleteOne();
+  
+    const _id = user._id as string
+    // Log the delete action
+    await logUserAction('DELETE_USER', _id.toString(), user.role);
+  
+    res.status(200).json(new ApiResponse(200, {}, 'User deleted successfully'));
+  });
+  
 
 

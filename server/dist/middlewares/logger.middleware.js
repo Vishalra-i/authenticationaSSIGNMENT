@@ -12,20 +12,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const log_model_1 = __importDefault(require("../models/log.model"));
-const logUserAction = (actionType_1, userId_1, role_1, ...args_1) => __awaiter(void 0, [actionType_1, userId_1, role_1, ...args_1], void 0, function* (actionType, userId, role, additionalData = {}) {
-    try {
-        const log = new log_model_1.default({
-            actionType,
-            userId,
-            role,
-            additionalData,
-            timestamp: new Date(),
-        });
-        yield log.save();
-    }
-    catch (error) {
-        console.error('Error logging user action:', error);
-    }
-});
-exports.default = logUserAction;
+const log_middleware_1 = __importDefault(require("../utils/log.middleware"));
+const logMiddleware = (actionType) => {
+    return (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+        try {
+            if (req.user) {
+                yield (0, log_middleware_1.default)(actionType, req.user._id.toString(), req.user.role);
+            }
+        }
+        catch (error) {
+            console.error('Error in logging middleware:', error);
+        }
+        next();
+    });
+};
+exports.default = logMiddleware;
