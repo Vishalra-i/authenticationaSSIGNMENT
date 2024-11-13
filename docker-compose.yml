@@ -5,13 +5,10 @@ services:
       context: ./server
     ports:
       - "4000:4000"
-    environment:
-      - MONGODB_URI=mongodb+srv://vishalrai0392:Vishal123@vishal.cc4bno2.mongodb.net
-      - PORT=4000
-      - JWT_SECRET=vishal7492
-      - CLIENT_URL=http://localhost:3000
+    env_file:
+      - .env
     volumes:
-      - ./backend:/app
+      - ./server:/app
     command: npm run dev
 
   frontend:
@@ -19,8 +16,8 @@ services:
       context: ./client
     ports:
       - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_SERVER_URL=http://localhost:4000
+    env_file:
+      - .env
     volumes:
-      - ./frontend:/app
+      - ./client:/app
     command: npm run dev
