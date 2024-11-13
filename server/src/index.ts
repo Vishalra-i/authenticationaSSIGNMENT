@@ -10,3 +10,4 @@ connectDB().then(() => {
 }).catch((err) => {
     console.log(`Error connecting to database: ${err}`)
 })
+
